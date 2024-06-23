@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -20,6 +21,12 @@ func (s *TasksService) RegisterRoutes(r *mux.Router) {
 }
 
 func (s *TasksService) handleCreateTask(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return
+	}
+
+	defer r.Body.Close()
 
 }
 
