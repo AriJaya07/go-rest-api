@@ -26,6 +26,6 @@ func main() {
 
 	store := NewStore(db)
 
-	api := NewAPIServer(":3000", store)
-	api.Serve()
+	server := NewAPIServer(":3000", store)
+	server.Serve()
 }

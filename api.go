@@ -13,14 +13,19 @@ type APIServer struct {
 }
 
 func NewAPIServer(addr string, store Store) *APIServer {
-	return &APIServer{addr: addr, store: store}
+	return &APIServer{
+		addr:  addr,
+		store: store,
+	}
 }
 
 func (s *APIServer) Serve() {
 	router := mux.NewRouter()
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
-	// registering our service
+	projectService := NewProjectService(s.store)
+	projectService.RegisterRoutes(subrouter)
+
 	usersService := NewUserService(s.store)
 	usersService.RegisterRoutes(subrouter)
 

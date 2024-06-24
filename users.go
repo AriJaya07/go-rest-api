@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var errEmailRequired = errors.New("Email is required")
+var errEmailRequired = errors.New("email is required")
 var errFirstNameRequired = errors.New("first name is required")
 var errLastNameRequired = errors.New("last name is required")
 var errPasswordRequired = errors.New("password is required")
@@ -24,6 +24,7 @@ func NewUserService(s Store) *UserService {
 
 func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/register", s.handleUserRegister).Methods("POST")
+	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +43,7 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := validateUserPayLoad(payload); err != nil {
+	if err := validateUserPayload(payload); err != nil {
 		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
 	}
@@ -69,7 +70,14 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 	WriteJSON(w, http.StatusCreated, token)
 }
 
-func validateUserPayLoad(user *User) error {
+func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
+	// 1. Finf user in db by email
+	// 2. compare password with hashed password
+	// 3. Create JWY and set it in a cookie
+	// 4. Return JWT in response
+}
+
+func validateUserPayload(user *User) error {
 	if user.Email == "" {
 		return errEmailRequired
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/go-sql-driver/mysql"
@@ -22,17 +23,17 @@ func NewMySQLStorage(cfg mysql.Config) *MySQLStorage {
 		log.Fatal(err)
 	}
 
-	log.Println("Connected to MySQL!")
+	fmt.Println("Connected to MySQL!")
 
 	return &MySQLStorage{db: db}
 }
 
 func (s *MySQLStorage) Init() (*sql.DB, error) {
 	// initialize the tables
-	if err := s.createProjectsTable(); err != nil {
+	if err := s.createUsersTable(); err != nil {
 		return nil, err
 	}
-	if err := s.createUsersTable(); err != nil {
+	if err := s.createProjectsTable(); err != nil {
 		return nil, err
 	}
 	if err := s.createTasksTable(); err != nil {
@@ -40,24 +41,6 @@ func (s *MySQLStorage) Init() (*sql.DB, error) {
 	}
 
 	return s.db, nil
-}
-
-func (s *MySQLStorage) createProjectsTable() error {
-	_, err := s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS projects (
-			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-			name VARCHAR(255) NOT NULL,
-			createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-			PRIMARY KEY (id)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-	`)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *MySQLStorage) createUsersTable() error {
@@ -78,24 +61,35 @@ func (s *MySQLStorage) createUsersTable() error {
 	return err
 }
 
+func (s *MySQLStorage) createProjectsTable() error {
+	_, err := s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS projects (
+			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+			name VARCHAR(255) NOT NULL,
+			createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+			PRIMARY KEY (id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+	`)
+
+	return err
+}
+
 func (s *MySQLStorage) createTasksTable() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS tasks (
 			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
 			name VARCHAR(255) NOT NULL,
 			status ENUM('TODO', 'IN_PROGRESS', 'IN_TESTING', 'DONE') NOT NULL DEFAULT 'TODO',
-			projectedId INT UNSIGNED NOT NULL,
+			projectId INT UNSIGNED NOT NULL,
 			assignedToID INT UNSIGNED NOT NULL,
 			createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 			PRIMARY KEY (id),
 			FOREIGN KEY (assignedToID) REFERENCES users(id),
-			FOREIGN KEY (projectedId) REFERENCES projects(id)
+			FOREIGN KEY (projectId) REFERENCES projects(id)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 	`)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
