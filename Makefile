@@ -1,19 +1,8 @@
-.PHONY: all build run clean
-
-#  Go parameters
-GOCMD=go
-GOBUILD=${GOCMD} build
-GOCLEAN=${GOCMD} clean
-BINARY_NAME=main
-
-all: build
+run: build
+	@./bin/api
 
 build:
-	${GOBUILD} -o ${BINARY_NAME} -v
+	@go build -o bin/api
 
-run: build 
-	./${BINARY_NAME}
-
-clean: 
-	${GOCLEAN}
-	rm -f ${BINARY_NAME}
+test:
+	@go test -v ./...
