@@ -37,7 +37,7 @@ func TestCreateTask(t *testing.T) {
 		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusBadRequest {
-			t.Error("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
+			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
 		}
 
 		var response ErrorResponse

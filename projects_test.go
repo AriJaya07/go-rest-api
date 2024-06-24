@@ -47,7 +47,7 @@ func TestCreateProject(t *testing.T) {
 		}
 
 		if response.Error != "Name is required" {
-			t.Error("expected error message %s, got %s", "Name is required", response.Error)
+			t.Errorf("expected error message %s, got %s", "Name is required", response.Error)
 		}
 	})
 
