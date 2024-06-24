@@ -11,7 +11,7 @@ func TestCreateJWT(t *testing.T) {
 
 	token, err := CreateJWT(secret, userID)
 	if err != nil {
-		t.Error("error creating JWT: %v", err)
+		t.Errorf("error creating JWT: %v", err)
 	}
 
 	if token == "" {
