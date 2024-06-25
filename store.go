@@ -13,6 +13,7 @@ type Store interface {
 	CreateUser(u *User) (*User, error)
 	GetUserByID(id string) (*User, error)
 	// Projects
+	GetAllProjects() ([]Project, error)
 	CreateProject(p *Project) error
 	GetProject(id string) (*Project, error)
 	DeleteProject(id string) error
@@ -28,13 +29,48 @@ func NewStore(db *sql.DB) *Storage {
 }
 
 func (s *Storage) CreateProject(p *Project) error {
-	_, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
+	result, err := s.db.Exec("INSERT INTO projects (name) VALUES (?)", p.Name)
+	if err != nil {
+		return err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	p.ID = id
+
 	return err
+}
+
+func (s *Storage) GetAllProjects() ([]Project, error) {
+	var projects []Project
+	rows, err := s.db.Query("SELECT * FROM projects")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p Project
+		if err := rows.Scan(&p.ID, &p.Name, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		projects = append(projects, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return projects, nil
 }
 
 func (s *Storage) GetProject(id string) (*Project, error) {
 	var p Project
-	err := s.db.QueryRow("SELECT id, name, createdAt, FROM projects WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.CreatedAt)
+	query := "SELECT id, name, createdAt FROM projects WHERE id = ?"
+	err := s.db.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.CreatedAt)
 	return &p, err
 }
 
@@ -69,7 +105,7 @@ func (s *Storage) GetUserByID(id string) (*User, error) {
 }
 
 func (s *Storage) CreateTask(t *Task) (*Task, error) {
-	rows, err := s.db.Exec("INSERT INTO tasks (name, status, project_id, assigned_to) VALUES (?, ?, ?, ?)", t.Name, t.Status, t.ProjectID, t.AssignedToID)
+	rows, err := s.db.Exec("INSERT INTO tasks (name, status, project_id, assigned_to) VALUES (?, ?, ?, ?)", t.Name, t.Status, t.ProjectId, t.AssignedToID)
 
 	if err != nil {
 		return nil, err
@@ -86,6 +122,6 @@ func (s *Storage) CreateTask(t *Task) (*Task, error) {
 
 func (s *Storage) GetTask(id string) (*Task, error) {
 	var t Task
-	err := s.db.QueryRow("SELECT id, name, status, project_id, assigned_to, createdAt FROM tasks WHERE id = ?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt)
+	err := s.db.QueryRow("SELECT id, name, status, project_id, assigned_to, createdAt FROM tasks WHERE id = ?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectId, &t.AssignedToID, &t.CreatedAt)
 	return &t, err
 }

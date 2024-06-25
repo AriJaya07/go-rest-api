@@ -84,7 +84,7 @@ func validateTaskPayload(task *Task) error {
 		return errNameRequired
 	}
 
-	if task.ProjectID == 0 {
+	if task.ProjectId == 0 {
 		return errProjectIDRequired
 	}
 

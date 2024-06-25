@@ -1,11 +1,17 @@
 package main
 
+import "errors"
+
 // Mocks
 
 type MockStore struct{}
 
 func (s *MockStore) CreateProject(p *Project) error {
 	return nil
+}
+
+func (ms *MockStore) GetAllProjects() ([]Project, error) {
+	return nil, errors.New("Not implemented")
 }
 
 func (s *MockStore) GetProject(id string) (*Project, error) {

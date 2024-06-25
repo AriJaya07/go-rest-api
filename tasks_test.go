@@ -54,7 +54,7 @@ func TestCreateTask(t *testing.T) {
 	t.Run("should create a task", func(t *testing.T) {
 		payload := &Task{
 			Name:         "Creating a REST API in go",
-			ProjectID:    1,
+			ProjectId:    1,
 			AssignedToID: 42,
 		}
 
