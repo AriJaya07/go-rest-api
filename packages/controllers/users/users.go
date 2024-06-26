@@ -34,11 +34,23 @@ func NewUserService(s store.Store) *UserService {
 }
 
 func (s *UserService) RegisterRoutes(r *mux.Router) {
+	r.HandleFunc("/users", s.handleGetAllUser).Methods("GET")
 	r.HandleFunc("/users/register", s.handleUserRegister).Methods("POST")
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
+	r.HandleFunc("/users/edit-profile/{id}", s.handleUserUpdate).Methods("PUT")
 	r.HandleFunc("/users/delete/{id}", s.handleUserDelete).Methods("DELETE")
 	// . PENDING (BUG)
-	r.HandleFunc("/users/change-password", s.handleChangePassword).Methods("PUT")
+	r.HandleFunc("/users/change-password/{id}", s.handleChangePassword).Methods("PUT")
+}
+
+func (s *UserService) handleGetAllUser(w http.ResponseWriter, r *http.Request) {
+	users, err := s.store.GetAllUsers()
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Error getting all user"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, users)
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
@@ -129,6 +141,8 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 // BUGGGGGG
 func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+
 	// 1. Decode JSON input
 	var input types.ChangePassword
 
@@ -145,15 +159,8 @@ func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// 3. Authenticate user
-	userID, ok := r.Context().Value("ID").(int64)
-	if !ok {
-		utils.WriteJSON(w, http.StatusUnauthorized, types.ErrorResponse{Error: "Unauthorized"})
-		return
-	}
-
 	// Fetch user from store using userID (convert userID to string if required by your GetUserByID function)
-	user, err := s.store.GetUserByID(strconv.FormatInt(userID, 10))
+	user, err := s.store.GetUserByID(idStr)
 	if err != nil {
 		utils.WriteJSON(w, http.StatusUnauthorized, types.ErrorResponse{Error: "Failed to fetch user"})
 	}
@@ -182,6 +189,44 @@ func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Reques
 }
 
 /// END BUG ////
+
+func (s *UserService) handleUserUpdate(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+
+	// Decode JSON input
+	var input types.UserUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+	defer r.Body.Close()
+
+	// Fetch user from store
+	user, err := s.store.GetUserByID(idStr)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to fetch user"})
+		return
+	}
+
+	// Update user fields
+	if input.FirstName != "" {
+		user.FirstName = input.FirstName
+	}
+	if input.LastName != "" {
+		user.LastName = input.LastName
+	}
+	if input.Email != "" {
+		user.Email = input.Email
+	}
+
+	// Update user in store
+	if err := s.store.UpdateUser(user); err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to update user"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "User updated successfully"})
+}
 
 func (s *UserService) handleUserDelete(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]

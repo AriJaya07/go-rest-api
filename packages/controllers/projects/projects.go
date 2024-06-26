@@ -22,9 +22,10 @@ func NewProjectService(s store.Store) *ProjectService {
 
 func (s *ProjectService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/projects", auth.WithJWTAuth(s.handleGetAllProject, s.store)).Methods("GET")
-	r.HandleFunc("/projects/{id}", auth.WithJWTAuth(s.handleGetProject, s.store)).Methods("GET")
-	r.HandleFunc("/projects", auth.WithJWTAuth(s.handleCreateProject, s.store)).Methods("POST")
-	r.HandleFunc("/projects/{id}", auth.WithJWTAuth(s.handleDeleteProject, s.store)).Methods("DELETE")
+	r.HandleFunc("/projects/detail/{id}", auth.WithJWTAuth(s.handleGetProject, s.store)).Methods("GET")
+	r.HandleFunc("/projects/add", auth.WithJWTAuth(s.handleCreateProject, s.store)).Methods("POST")
+	r.HandleFunc("/projects/edit-projects/{id}", auth.WithJWTAuth(s.handleUpdateProject, s.store)).Methods("PUT")
+	r.HandleFunc("/projects/delete/{id}", auth.WithJWTAuth(s.handleDeleteProject, s.store)).Methods("DELETE")
 }
 
 func (s *ProjectService) handleCreateProject(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +79,36 @@ func (s *ProjectService) handleGetProject(w http.ResponseWriter, r *http.Request
 	}
 
 	utils.WriteJSON(w, http.StatusOK, project)
+}
+
+func (s *ProjectService) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+
+	var input types.UpdateProject
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+	defer r.Body.Close()
+
+	// Fetch user from store
+	project, err := s.store.GetProject(idStr)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to fetch project"})
+		return
+	}
+
+	if input.Name != "" {
+		project.Name = input.Name
+	}
+
+	if err := s.store.UpdateProject(project); err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to update project"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "Project updated successfully"})
+
 }
 
 func (s *ProjectService) handleDeleteProject(w http.ResponseWriter, r *http.Request) {

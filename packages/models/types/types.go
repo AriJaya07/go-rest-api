@@ -18,6 +18,13 @@ type User struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type UserUpdateRequest struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -41,6 +48,11 @@ type Project struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+type UpdateProject struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type CreateTaskPayLoad struct {

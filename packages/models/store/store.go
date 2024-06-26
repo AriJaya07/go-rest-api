@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/AriJaya07/go-rest-api/packages/models/types"
 )
@@ -12,6 +13,7 @@ type Storage struct {
 
 type Store interface {
 	// Users
+	GetAllUsers() ([]types.User, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
 	CreateUser(u *types.User) (*types.User, error)
 	GetUserByID(id string) (*types.User, error)
@@ -21,6 +23,7 @@ type Store interface {
 	GetAllProjects() ([]types.Project, error)
 	CreateProject(p *types.Project) error
 	GetProject(id string) (*types.Project, error)
+	UpdateProject(project *types.Project) error
 	DeleteProject(id string) error
 	// Tasks
 	CreateTask(t *types.Task) (*types.Task, error)
@@ -35,6 +38,33 @@ func NewStore(db *sql.DB) *Storage {
 
 func (s *Storage) QueryRow(query string, args ...interface{}) *sql.Row {
 	return s.db.QueryRow(query, args...)
+}
+
+func (s *Storage) GetAllUsers() ([]types.User, error) {
+	var users []types.User
+
+	rows, err := s.db.Query("SELECT id, email, firstName, lastName, createdAt FROM users")
+	if err != nil {
+		log.Println("Error executing query:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var u types.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt); err != nil {
+			log.Println("Error scanning row:", err)
+			return nil, err
+		}
+		users = append(users, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Error after scanning rows:", err)
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (s *Storage) CreateUser(u *types.User) (*types.User, error) {
@@ -81,7 +111,7 @@ func (s *Storage) CreateProject(p *types.Project) error {
 
 func (s *Storage) UpdateUser(user *types.User) error {
 	// Prepare SQL statement
-	query := "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?"
+	query := "UPDATE users SET firstName = ?, lastName = ?, email = ? WHERE id = ?"
 
 	// Execute SQL statement
 	_, err := s.db.Exec(query, user.FirstName, user.LastName, user.Email, user.ID)
@@ -120,6 +150,17 @@ func (s *Storage) GetProject(id string) (*types.Project, error) {
 	query := "SELECT id, name, createdAt FROM projects WHERE id = ?"
 	err := s.db.QueryRow(query, id).Scan(&p.ID, &p.Name, &p.CreatedAt)
 	return &p, err
+}
+
+func (s *Storage) UpdateProject(project *types.Project) error {
+	query := "UPDATE projects SET name = ? WHERE id = ?"
+
+	_, err := s.db.Exec(query, project.Name, project.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Storage) DeleteProject(id string) error {
