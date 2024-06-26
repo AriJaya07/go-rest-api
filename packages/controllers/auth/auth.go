@@ -50,9 +50,10 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store store.Store) http.HandlerFu
 	}
 }
 
-func CreateJWT(secret []byte, userID int64) (string, error) {
+func CreateJWT(secret []byte, userID int64, email string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userID":    strconv.Itoa(int(userID)),
+		"email":     email,
 		"expiresAt": time.Now().Add(time.Hour * 24 * 120).Unix(),
 	})
 

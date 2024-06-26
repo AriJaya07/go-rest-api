@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/AriJaya07/go-rest-api/packages/config"
@@ -24,8 +26,7 @@ var errLastNameRequired = errors.New("last name is required")
 var errPasswordRequired = errors.New("password is required")
 
 type UserService struct {
-	store     store.Store
-	jwtSecret []byte
+	store store.Store
 }
 
 func NewUserService(s store.Store) *UserService {
@@ -35,6 +36,9 @@ func NewUserService(s store.Store) *UserService {
 func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/register", s.handleUserRegister).Methods("POST")
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
+	r.HandleFunc("/users/delete/{id}", s.handleUserDelete).Methods("DELETE")
+	// . PENDING (BUG)
+	r.HandleFunc("/users/change-password", s.handleChangePassword).Methods("PUT")
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
@@ -71,13 +75,18 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	token, err := createAndSetAuthCookie(u.ID, w)
+	token, err := createAndSetAuthCookie(u.ID, u.Email, w)
 	if err != nil {
 		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Error creating session"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, token)
+	response := types.LoginResponse{
+		Email: u.Email,
+		Token: token,
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, response)
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
@@ -107,21 +116,103 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Create JWY and set it in a cookie
-	token, err := auth.CreateJWT(s.jwtSecret, user.ID)
+	token, err := createAndSetAuthCookie(user.ID, user.Email, w)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Error user not found"})
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-	})
 
 	// 4. Return JWT in response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	json.NewEncoder(w).Encode(map[string]string{"token": token, "email": user.Email})
+}
+
+// BUGGGGGG
+func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	// 1. Decode JSON input
+	var input types.ChangePassword
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+
+	defer r.Body.Close()
+
+	// 2. Validate input
+	if input.CurrentPassword == "" || input.NewPassword == "" {
+		utils.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+
+	// 3. Authenticate user
+	userID, ok := r.Context().Value("ID").(int64)
+	if !ok {
+		utils.WriteJSON(w, http.StatusUnauthorized, types.ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	// Fetch user from store using userID (convert userID to string if required by your GetUserByID function)
+	user, err := s.store.GetUserByID(strconv.FormatInt(userID, 10))
+	if err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, types.ErrorResponse{Error: "Failed to fetch user"})
+	}
+
+	// verify current password
+	log.Println(user, "PP")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.CurrentPassword)); err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, types.ErrorResponse{Error: "Invalid current password"})
+		return
+	}
+
+	// 4. Update password
+	hashNewPassword, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to generate hashed password"})
+		return
+	}
+
+	user.Password = string(hashNewPassword)
+	if err := s.store.UpdateUser(user); err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to update user"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "Password update successfully"})
+}
+
+/// END BUG ////
+
+func (s *UserService) handleUserDelete(w http.ResponseWriter, r *http.Request) {
+	idStr := mux.Vars(r)["id"]
+	if idStr == "" {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Missing user ID"})
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Invalid user ID"})
+		return
+	}
+
+	if _, err := s.store.GetUserByID(idStr); err != nil {
+		if err == sql.ErrNoRows {
+			utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "User not found"})
+			return
+		} else {
+			utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to check user existence"})
+		}
+	}
+
+	// Delete the user
+	if err := s.store.DeleteUser(id); err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to delete user"})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 func validateUserPayload(user *types.User) error {
@@ -144,16 +235,18 @@ func validateUserPayload(user *types.User) error {
 	return nil
 }
 
-func createAndSetAuthCookie(id int64, w http.ResponseWriter) (string, error) {
+func createAndSetAuthCookie(id int64, email string, w http.ResponseWriter) (string, error) {
 	secret := []byte(config.Envs.JWTSecret)
-	token, err := auth.CreateJWT(secret, id)
+	token, err := auth.CreateJWT(secret, id, email)
 	if err != nil {
 		return "", err
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:  "Authorization",
-		Value: token,
+		Name:     "token",
+		Value:    token,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
 	})
 
 	return token, nil
