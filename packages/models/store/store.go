@@ -11,6 +11,7 @@ type Storage struct {
 }
 
 type Store interface {
+	QueryRow(query string, args ...interface{}) *sql.Row
 	// Users
 	CreateUser(u *types.User) (*types.User, error)
 	GetUserByID(id string) (*types.User, error)
@@ -28,6 +29,10 @@ func NewStore(db *sql.DB) *Storage {
 	return &Storage{
 		db: db,
 	}
+}
+
+func (s *Storage) QueryRow(query string, args ...interface{}) *sql.Row {
+	return s.db.QueryRow(query, args...)
 }
 
 func (s *Storage) CreateProject(p *types.Project) error {
