@@ -45,7 +45,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store store.Store) http.HandlerFu
 			return
 		}
 
-		// call the handler fun and continue to te endpoint
+		// call the handler func and continue to the endpoint
 		handlerFunc(w, r)
 	}
 }

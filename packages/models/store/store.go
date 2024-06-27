@@ -82,6 +82,19 @@ func (s *Storage) CreateUser(u *types.User) (*types.User, error) {
 	return u, nil
 }
 
+func (s *Storage) UpdateUser(user *types.User) error {
+	// Prepare SQL statement
+	query := "UPDATE users SET firstName = ?, lastName = ?, email = ? WHERE id = ?"
+
+	// Execute SQL statement
+	_, err := s.db.Exec(query, user.FirstName, user.LastName, user.Email, user.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Storage) GetUserByID(id string) (*types.User, error) {
 	var u types.User
 	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
@@ -107,19 +120,6 @@ func (s *Storage) CreateProject(p *types.Project) error {
 	p.ID = id
 
 	return err
-}
-
-func (s *Storage) UpdateUser(user *types.User) error {
-	// Prepare SQL statement
-	query := "UPDATE users SET firstName = ?, lastName = ?, email = ? WHERE id = ?"
-
-	// Execute SQL statement
-	_, err := s.db.Exec(query, user.FirstName, user.LastName, user.Email, user.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *Storage) GetAllProjects() ([]types.Project, error) {
