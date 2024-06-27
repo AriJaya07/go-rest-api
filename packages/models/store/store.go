@@ -43,7 +43,7 @@ func (s *Storage) QueryRow(query string, args ...interface{}) *sql.Row {
 func (s *Storage) GetAllUsers() ([]types.User, error) {
 	var users []types.User
 
-	rows, err := s.db.Query("SELECT id, email, firstName, lastName, createdAt FROM users")
+	rows, err := s.db.Query("SELECT * FROM users")
 	if err != nil {
 		log.Println("Error executing query:", err)
 		return nil, err
@@ -52,7 +52,7 @@ func (s *Storage) GetAllUsers() ([]types.User, error) {
 
 	for rows.Next() {
 		var u types.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.Password, &u.CreatedAt); err != nil {
 			log.Println("Error scanning row:", err)
 			return nil, err
 		}
