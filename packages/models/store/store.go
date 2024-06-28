@@ -97,7 +97,7 @@ func (s *Storage) UpdateUser(user *types.User) error {
 
 func (s *Storage) GetUserByID(id string) (*types.User, error) {
 	var u types.User
-	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
+	err := s.db.QueryRow("SELECT id, email, password, firstName, lastName, createdAt FROM users WHERE id = ?", id).Scan(&u.ID, &u.Email, &u.Password, &u.FirstName, &u.LastName, &u.CreatedAt)
 	return &u, err
 }
 

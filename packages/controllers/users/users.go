@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -39,7 +38,6 @@ func (s *UserService) RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/users/login", s.handleUserLogin).Methods("POST")
 	r.HandleFunc("/users/edit-profile/{id}", s.handleUserUpdate).Methods("PUT")
 	r.HandleFunc("/users/delete/{id}", s.handleUserDelete).Methods("DELETE")
-	// . PENDING (BUG)
 	r.HandleFunc("/users/change-password/{id}", s.handleChangePassword).Methods("PUT")
 }
 
@@ -139,7 +137,6 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"token": token, "email": user.Email})
 }
 
-// BUGGGGGG
 func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
 
@@ -166,7 +163,6 @@ func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Reques
 	}
 
 	// verify current password
-	log.Println(user, "PP")
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.CurrentPassword)); err != nil {
 		utils.WriteJSON(w, http.StatusUnauthorized, types.ErrorResponse{Error: "Invalid current password"})
 		return
@@ -187,8 +183,6 @@ func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Reques
 
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "Password update successfully"})
 }
-
-/// END BUG ////
 
 func (s *UserService) handleUserUpdate(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
