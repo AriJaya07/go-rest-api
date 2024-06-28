@@ -176,7 +176,7 @@ func (s *UserService) handleChangePassword(w http.ResponseWriter, r *http.Reques
 	}
 
 	user.Password = string(hashNewPassword)
-	if err := s.store.UpdateUser(user); err != nil {
+	if err := s.store.UpdatePassword(user); err != nil {
 		utils.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{Error: "Failed to update user"})
 		return
 	}

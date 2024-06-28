@@ -18,6 +18,7 @@ type Store interface {
 	CreateUser(u *types.User) (*types.User, error)
 	GetUserByID(id string) (*types.User, error)
 	UpdateUser(user *types.User) error
+	UpdatePassword(user *types.User) error
 	DeleteUser(id int64) error
 	// Projects
 	GetAllProjects() ([]types.Project, error)
@@ -143,6 +144,15 @@ func (s *Storage) GetAllProjects() ([]types.Project, error) {
 	}
 
 	return projects, nil
+}
+
+func (s *Storage) UpdatePassword(user *types.User) error {
+	query := "UPDATE users SET password = ? WHERE id = ?"
+	_, err := s.db.Exec(query, user.Password, user.ID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Storage) GetProject(id string) (*types.Project, error) {
